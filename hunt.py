@@ -69,8 +69,7 @@ def findTargetPair(raw, params):
         cv2.imshow("mask", mask)
     __, contours, hierarchy = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     if len(contours) > 1:
-        ordered = sorted(contours, key = cv2.contourArea, reverse = True)[:1]
-        largestContours = [ordered[0], ordered[1]]
+        largestContours = sorted(contours, key = cv2.contourArea, reverse = True)[:2]
         if cv2.contourArea(largestContours[0]) > params["countourSize"] \
                 and cv2.contourArea(largestContours[1]) > params["countourSize"]:
             return largestContours
@@ -108,25 +107,19 @@ def main():
         if raw is not None and firstFrameSkipped:
 
             ### This is the primary frame processing block
+            fpsCounter.tick()
+            gameTarget.evaluateCandidatePair(findTargetPair(raw, params))
+
             if g_debugMode:
+                if gameTarget.confirmed:
+                    cv2.putText(raw, gameTarget.confirmedType,
+                                (g_cameraFrameWidth - 200, 13 + 6),
+                                cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (255,255,255), 1)
                 if fpsDisplay:
                     cv2.putText(raw, "{:.0f} fps".format(fpsCounter.getFramerate()),
                                 (g_cameraFrameWidth - 100, 13 + 6),
                                 cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (255,255,255), 1)
                 cv2.imshow("raw", raw)
-
-            fpsCounter.tick()
-
-            # acquired contour pair
-            #gameTarget.candidateCountourPair = findTargetPair(raw, params)
-
-            # classify the target pair, if there is one; otherwise the confirmed attribute is false and age is 0.
-            # Use a new function that compares X and Y of the target pair and determines if they are within
-            # a range of pixel tolerance that means they are aligned.
-            # Set a target type string of either "peg" or "boiler" or "none". Increment the target age counter.
-            # gameTarget.confirmed = True
-            # gameTarget.confirmedType = "xxx"
-            # gameTarget.confirmedAge = <int>
 
             # Now we need a bounding box. Use getTargetBoxTight from vision.py. It returns a list of tuples,
             # an array of arrays. Put it in gameTarget.boundingBox
