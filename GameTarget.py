@@ -5,7 +5,7 @@ import cv2
 class GameTarget:
     def __init__(self, debug=False):
         self.debugFlag = debug
-        self.candidateCountourPair = { }
+        self.candidateCountourPair = []
         self.confirmed = False
         self.confirmedAge = 0
         self.confirmedType = None

@@ -1,6 +1,7 @@
 import numpy as np
 import cv2
 import argparse
+import time
 
 from GameTarget import GameTarget
 from RealtimeInterval import RealtimeInterval
@@ -49,6 +50,30 @@ def createCamera():
     g_cameraFrameHeight = int(camera.get(cv2.CAP_PROP_FRAME_HEIGHT))
     return camera
 
+def filterHue(source, hue, hueWidth, low, high):
+    MAX_HUE = 179
+    hsv = cv2.cvtColor(source, cv2.COLOR_BGR2HSV)
+
+    lowHue = max(hue - hueWidth, 0)
+    lowFilter = np.array([lowHue, low, low])
+
+    highHue = min(hue + hueWidth, MAX_HUE)
+    highFilter = np.array([highHue, high, high])
+
+    return cv2.inRange(hsv, lowFilter, highFilter)
+
+def findTargetPair(raw, params):
+    global g_debugMode
+    mask = filterHue(raw, params["hue"], params["hueWidth"], params["low"], params["high"])
+    if g_debugMode:
+        cv2.imshow("mask", mask)
+    __, contours, hierarchy = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    if len(contours) > 1:
+        ordered = sorted(contours, key = cv2.contourArea, reverse = True)[:1]
+        largestContours = [ordered[0], ordered[1]]
+        if cv2.contourArea(largestContours[0]) > params["countourSize"] \
+                and cv2.contourArea(largestContours[1]) > params["countourSize"]:
+            return largestContours
 
 def main():
     params = CVParameterGroup("Sliders", g_debugMode)
@@ -92,10 +117,8 @@ def main():
 
             fpsCounter.tick()
 
-            # acquire a target pair
-            # Use the findTarget function modified to return 2 largest contours, not the 1 largest.
-            # We'll put these 2 countours into a list. Maybe make
-            # the list be gameTarget.candidateCountourPair
+            # acquired contour pair
+            #gameTarget.candidateCountourPair = findTargetPair(raw, params)
 
             # classify the target pair, if there is one; otherwise the confirmed attribute is false and age is 0.
             # Use a new function that compares X and Y of the target pair and determines if they are within
@@ -153,4 +176,5 @@ args = parser.parse_args()
 g_debugMode = not args.releaseMode
 
 main()
+time.sleep(2)
 exit()
