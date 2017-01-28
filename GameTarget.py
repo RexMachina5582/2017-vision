@@ -28,6 +28,8 @@ class GameTarget:
 
     # We accept this variance from the theoretical when comparing the patch areas as a ratio
     TARGET_RATIO_VARIANCE = 0.15
+    # We accept this as the maximum variance for pixel difference of area vs distance
+    DISTANCE_AREA_RATIO = 100
 
 
     def __init__(self, debug=False):
@@ -66,8 +68,9 @@ class GameTarget:
 
         if (abs(self.patchA.centerY - self.patchB.centerY) < GameTarget.Y_CONGRUENCE_THRESHOLD
             and (abs(GameTarget.PEG_LEFT_TO_RIGHT_RATIO-patchRatio) < GameTarget.TARGET_RATIO_VARIANCE)):
-            self.__confirmTarget(self.LIFT_TYPE)
-            return True
+            if(((5.179 * (abs(self.patchA.centerX - self.patchB.centerX) - 465.135)) - (self.patchA.area)  < self.DISTANCE_AREA_RATIO)):
+                self.__confirmTarget(self.LIFT_TYPE)
+                return True
         elif (abs(self.patchA.centerX - self.patchB.centerX) < GameTarget.X_CONGRUENCE_THRESHOLD
             and (abs(GameTarget.BOILER_BOTTOM_TO_TOP_RATIO-patchRatio) < GameTarget.TARGET_RATIO_VARIANCE)):
             self.__confirmTarget(self.BOILER_TYPE)
