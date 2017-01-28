@@ -6,7 +6,7 @@ import time
 from GameTarget import GameTarget
 from RealtimeInterval import RealtimeInterval
 from CVParameterGroup import CVParameterGroup
-import TriangleSimilarityDistanceCalculator as distanceCalc
+import TriangleSimilarityDistanceCalculator as DistanceCalculator
 import CameraReaderAsync
 from WeightedFramerateCounter import WeightedFramerateCounter
 
@@ -15,7 +15,8 @@ from WeightedFramerateCounter import WeightedFramerateCounter
 '''
 
 # Tunable parameters
-SAMPLE_PARAMETER = 1
+REFERENCE_BOILER_WIDTH = 100
+REFERENCE_LIFT_HEIGHT = 100
 
 g_debugMode = True
 g_cameraFrameWidth = None
@@ -94,6 +95,11 @@ def main():
     # We need to skip the first frame to make sure we don't process bad image data.
     firstFrameSkipped = False
 
+    boilerDistance = DistanceCalculator.TriangleSimilarityDistanceCalculator(REFERENCE_BOILER_WIDTH,
+                                                                                  DistanceCalculator.PFL_H_C920)
+    liftDistance = DistanceCalculator.TriangleSimilarityDistanceCalculator(REFERENCE_LIFT_HEIGHT,
+                                                                                  DistanceCalculator.PFL_V_C920)
+
     # Loop on acquisition
     while (True):
 
@@ -109,11 +115,18 @@ def main():
             ### This is the primary frame processing block
             fpsCounter.tick()
             gameTarget.evaluateCandidatePair(findTargetPair(raw, params))
+            if gameTarget.confirmed:
+                horizontalOffset = gameTarget.centerX - (g_cameraFrameWidth / 2.0)
+                if gameTarget.confirmedType == gameTarget.LIFT_TYPE:
+                    distance = liftDistance.CalculateDistance(gameTarget.patchA.height)*100
+                else:
+                    distance = boilerDistance.CalculateDistance(gameTarget.patchA.width)*100
 
             if g_debugMode:
                 if gameTarget.confirmed:
-                    cv2.putText(raw, gameTarget.confirmedType,
-                                (g_cameraFrameWidth - 200, 13 + 6),
+                    targetDistance = (abs(gameTarget.patchA.centerX - gameTarget.patchB.centerX))
+                    cv2.putText(raw, gameTarget.confirmedType + "Distance:" + str(round(5.179*targetDistance - 465.135)) + "Area:" + str(round((gameTarget.patchA.area / 10))),
+                                (g_cameraFrameWidth - 600, 13 + 6),
                                 cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (255,255,255), 1)
                 if fpsDisplay:
                     cv2.putText(raw, "{:.0f} fps".format(fpsCounter.getFramerate()),
@@ -124,14 +137,7 @@ def main():
             # Now we need a bounding box. Use getTargetBoxTight from vision.py. It returns a list of tuples,
             # an array of arrays. Put it in gameTarget.boundingBox
 
-            # determine target skew/off-axis; note that Team 5495 does not seem to use this in robot code,
-            # maybe it is used in their dashboard.
-
-            # determine target horizontal offset (lateral)
-
             # determine target range
-
-            # determine age of target
 
             # pass telemetry to robot
 

@@ -8,11 +8,14 @@ class Patch:
         self.centerX = int(M["m10"] / M["m00"])
         self.centerY = int(M["m01"] / M["m00"])
         self.area = int(M["m00"])
-
+        self.width = int(M["m10"])
+        self.height = int(M["m01"])
 
 
 class GameTarget:
 
+    LIFT_TYPE = "lift"
+    BOILER_TYPE = "boiler"
     # Boiler target patches have congruent X for center points within this many pixels
     X_CONGRUENCE_THRESHOLD = 10
     # The larger boiler target patch is about double the area of the smaller
@@ -54,24 +57,21 @@ class GameTarget:
         self.countourPair = countourPair
         self.patchA = Patch(countourPair[0])
         self.patchB = Patch(countourPair[1])
+        self.centerY = (self.patchA.centerY + self.patchB.centerY) / 2
+        self.centerX = (self.patchA.centerX + self.patchB.centerX) / 2
+
 
         # Patch A is the larger countour. Calculate its ratio, B as a % of A
         patchRatio = self.patchA.area/self.patchB.area
 
-        if (abs(self.patchA.centerY-self.patchB.centerY) < GameTarget.Y_CONGRUENCE_THRESHOLD
+        if (abs(self.patchA.centerY - self.patchB.centerY) < GameTarget.Y_CONGRUENCE_THRESHOLD
             and (abs(GameTarget.PEG_LEFT_TO_RIGHT_RATIO-patchRatio) < GameTarget.TARGET_RATIO_VARIANCE)):
-            self.__confirmTarget("PEG")
+            self.__confirmTarget(self.LIFT_TYPE)
             return True
-        if (abs(self.patchA.centerX-self.patchB.centerX) < GameTarget.X_CONGRUENCE_THRESHOLD
+        elif (abs(self.patchA.centerX - self.patchB.centerX) < GameTarget.X_CONGRUENCE_THRESHOLD
             and (abs(GameTarget.BOILER_BOTTOM_TO_TOP_RATIO-patchRatio) < GameTarget.TARGET_RATIO_VARIANCE)):
-            self.__confirmTarget("BOILER")
+            self.__confirmTarget(self.BOILER_TYPE)
             return True
-
-        # if / elif statements. Does the absolute difference of patch X values fit within the X threshold?
-        # And does the absolute difference of theoretical and actual patch ratios fit within variance?
-        # If so, you've found the boiler target. You should confirm it. Then, "elif", do something very similar
-        # for the patch Y values and target ratio that would qualify a peg target. If you do confirm a target,
-        # make sure to return true before hitting the reset further down.
 
         self.__reset()
         return False
