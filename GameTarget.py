@@ -4,11 +4,12 @@ import cv2
 
 class Patch:
     def __init__(self, countour):
-        # Reference our workshop code to find out how to use cv2.moments to calculate x, y, and area.
-        # Our trackTarget.py module is now in this project directory for easy reference.
-        self.centerX = 0
-        self.centerY = 0
-        self.area = 0
+        M = cv2.moments(countour)
+        self.centerX = int(M["m10"] / M["m00"])
+        self.centerY = int(M["m01"] / M["m00"])
+        self.area = int(M["m00"])
+
+
 
 class GameTarget:
 
@@ -55,7 +56,16 @@ class GameTarget:
         self.patchB = Patch(countourPair[1])
 
         # Patch A is the larger countour. Calculate its ratio, B as a % of A
-        patchRatio = 0.9
+        patchRatio = self.patchA.area/self.patchB.area
+
+        if (abs(self.patchA.centerY-self.patchB.centerY) < GameTarget.Y_CONGRUENCE_THRESHOLD
+            and (abs(GameTarget.PEG_LEFT_TO_RIGHT_RATIO-patchRatio) < GameTarget.TARGET_RATIO_VARIANCE)):
+            self.__confirmTarget("PEG")
+            return True
+        if (abs(self.patchA.centerX-self.patchB.centerX) < GameTarget.X_CONGRUENCE_THRESHOLD
+            and (abs(GameTarget.BOILER_BOTTOM_TO_TOP_RATIO-patchRatio) < GameTarget.TARGET_RATIO_VARIANCE)):
+            self.__confirmTarget("BOILER")
+            return True
 
         # if / elif statements. Does the absolute difference of patch X values fit within the X threshold?
         # And does the absolute difference of theoretical and actual patch ratios fit within variance?
