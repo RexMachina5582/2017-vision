@@ -2,6 +2,9 @@ import numpy as np
 import cv2
 import argparse
 import time
+import mqttClient
+import sys
+import json
 
 from GameTarget import GameTarget
 from RealtimeInterval import RealtimeInterval
@@ -14,18 +17,27 @@ from WeightedFramerateCounter import WeightedFramerateCounter
 	Computer vision main module for Rex Machina 2017 competition
 '''
 
+MQTT_TOPIC_TARGETING = "rex/vision/telemetry"
+MQTT_TOPIC_SCREENSHOT = "rex/vision/screenshot"
+MQTT_HOST = "roboRIO-5495-FRC.local"
+MQTT_HOST_DEBUG = "10.0.1.94"
+MQTT_PORT = 5888
+
 # Tunable parameters
 REFERENCE_BOILER_WIDTH = 100
 REFERENCE_LIFT_HEIGHT = 100
 
 g_debugMode = True
-g_cameraFrameWidth = None
-g_cameraFrameHeight = None
+g_cameraFrameWidth = 0
+g_cameraFrameHeight = 0
 g_testImage = None
 
 def printif(message):
     if g_debugMode:
         print message
+
+def messageHandler(message):
+    sys.stdout.write(".")
 
 def setCVParameters(params):
     # HUES: GREEEN=65/75 BLUE=110
@@ -79,6 +91,14 @@ def main():
     params = CVParameterGroup("Sliders", g_debugMode)
     setCVParameters(params)
 
+    connectThrottle = RealtimeInterval(10)
+    topics = (MQTT_TOPIC_SCREENSHOT)
+    if g_debugMode:
+        host = MQTT_HOST_DEBUG
+    else:
+        host = MQTT_HOST
+    client = mqttClient.MqttClient(host, MQTT_PORT, topics, messageHandler)
+
     # Start the camera
     camera = cameraReader = None
     if g_testImage is None:
@@ -102,7 +122,12 @@ def main():
 
     # Loop on acquisition
     while (True):
-
+        if (not client.isConnected()) and connectThrottle.hasElapsed():
+            try:
+                client.connect()
+            except:
+                None
+        raw = None
         if g_testImage is not None:
             # Use a file image if provided, for testing
             raw = g_testImage.copy()
@@ -121,6 +146,16 @@ def main():
                     distance = liftDistance.CalculateDistance(gameTarget.patchA.height)*100
                 else:
                     distance = boilerDistance.CalculateDistance(gameTarget.patchA.width)*100
+                payload = {
+                    'horizontalOffset': horizontalOffset,
+                    'targetDistance': round(distance),
+                    'hasTarget': True,
+                    'targetAge': gameTarget.confirmedAge,
+                    'fps': round(fpsCounter.getFramerate())}
+            else:
+                payload = {
+                    'hasTarget': False,
+                    'fps': round(fpsCounter.getFramerate())}
 
             if g_debugMode:
                 if gameTarget.confirmed:
@@ -134,12 +169,9 @@ def main():
                                 cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (255,255,255), 1)
                 cv2.imshow("raw", raw)
 
-            # Now we need a bounding box. Use getTargetBoxTight from vision.py. It returns a list of tuples,
-            # an array of arrays. Put it in gameTarget.boundingBox
-
-            # determine target range
-
             # pass telemetry to robot
+            #printif(json.dumps(payload))
+            client.publish(MQTT_TOPIC_TARGETING, json.dumps(payload))
 
         if raw is not None:
             firstFrameSkipped = True

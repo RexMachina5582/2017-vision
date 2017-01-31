@@ -22,7 +22,7 @@ class GameTarget:
     BOILER_BOTTOM_TO_TOP_RATIO = 0.5
 
     # Peg target patches have congruent Y for center points within this many pixels
-    Y_CONGRUENCE_THRESHOLD = 15
+    Y_CONGRUENCE_THRESHOLD = 35
     # Peg target patches are about equal in area
     PEG_LEFT_TO_RIGHT_RATIO = 1.0
 
