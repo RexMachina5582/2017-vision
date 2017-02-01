@@ -1,9 +1,8 @@
 import numpy as np
 import cv2
 import argparse
-import time
+import time, sys, os, signal
 import mqttClient
-import sys
 import json
 
 from GameTarget import GameTarget
@@ -19,6 +18,7 @@ from WeightedFramerateCounter import WeightedFramerateCounter
 
 MQTT_TOPIC_TARGETING = "rex/vision/telemetry"
 MQTT_TOPIC_SCREENSHOT = "rex/vision/screenshot"
+MQTT_TOPIC_SHUTDOWN = "res/robot/disabled"
 MQTT_HOST = "roboRIO-5495-FRC.local"
 MQTT_HOST_DEBUG = "10.0.1.94"
 MQTT_PORT = 5888
@@ -31,6 +31,16 @@ g_debugMode = True
 g_cameraFrameWidth = 0
 g_cameraFrameHeight = 0
 g_testImage = None
+g_shutdown = False
+
+class Killer:
+    dienow = False
+    def __init__(self):
+        signal.signal(signal.SIGINT, self.exit_gracefully)
+        signal.signal(signal.SIGTERM, self.exit_gracefully)
+
+    def exit_gracefully(self, signum, frame):
+        self.dienow = True
 
 def printif(message):
     if g_debugMode:
@@ -38,6 +48,8 @@ def printif(message):
 
 def messageHandler(message):
     sys.stdout.write(".")
+    if message.topic == MQTT_TOPIC_SHUTDOWN:
+        g_shutdown = True
 
 def setCVParameters(params):
     # HUES: GREEEN=65/75 BLUE=110
@@ -88,11 +100,12 @@ def findTargetPair(raw, params):
             return largestContours
 
 def main():
+    killer = Killer()
     params = CVParameterGroup("Sliders", g_debugMode)
     setCVParameters(params)
 
     connectThrottle = RealtimeInterval(10)
-    topics = (MQTT_TOPIC_SCREENSHOT)
+    topics = [MQTT_TOPIC_SCREENSHOT, MQTT_TOPIC_SHUTDOWN]
     if g_debugMode:
         host = MQTT_HOST_DEBUG
     else:
@@ -121,7 +134,7 @@ def main():
                                                                                   DistanceCalculator.PFL_V_C920)
 
     # Loop on acquisition
-    while (True):
+    while not g_shutdown and not killer.dienow:
         if (not client.isConnected()) and connectThrottle.hasElapsed():
             try:
                 client.connect()
@@ -199,7 +212,6 @@ def main():
 
     printif("End of main function")
 
-
 parser = argparse.ArgumentParser(description="OpenCV-based target telemetry, FRC 5582, 2017")
 parser.add_argument("--release", dest="releaseMode", action="store_const", const=True, default=not g_debugMode,
                     help="hides all debug windows (default: False)")
@@ -208,4 +220,6 @@ g_debugMode = not args.releaseMode
 
 main()
 time.sleep(2)
+if not g_debugMode:
+    os.system('shutdown now -h')
 exit()

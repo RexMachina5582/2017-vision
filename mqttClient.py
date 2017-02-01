@@ -40,7 +40,7 @@ class MqttClient:
 
     def on_connect(self, client, userdata, _, resultCode):
         print "Connected to MQTT broker with result code: " + str(resultCode)
-        self.__isConnecting = False;
+        self.__isConnecting = False
         if resultCode == 0:
             self.__isConnected = True
             for topic in self.__topics:
