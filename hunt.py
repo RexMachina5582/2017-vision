@@ -19,7 +19,7 @@ from WeightedFramerateCounter import WeightedFramerateCounter
 MQTT_TOPIC_TARGETING = "rex/vision/telemetry"
 MQTT_TOPIC_SCREENSHOT = "rex/vision/screenshot"
 MQTT_TOPIC_SHUTDOWN = "res/robot/disabled"
-MQTT_HOST = "roboRIO-5495-FRC.local"
+MQTT_HOST = "roboRIO-5582-FRC.local"
 MQTT_HOST_DEBUG = "10.0.1.94"
 MQTT_PORT = 5888
 
@@ -221,5 +221,6 @@ g_debugMode = not args.releaseMode
 main()
 time.sleep(2)
 if not g_debugMode:
-    os.system('shutdown now -h')
+    printif("shutting down")
+    #os.system('sudo shutdown -h now')
 exit()
